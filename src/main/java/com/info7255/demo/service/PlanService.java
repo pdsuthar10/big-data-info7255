@@ -30,7 +30,7 @@ public class PlanService {
                 keysToRemove.add(key);
 
                 Jedis jedis = this.getJedisPool().getResource();
-//                String relationKey = objectKey + "_" + planObject.get("objectId") + "_" + key.replace("-","");
+                String relationKey = objectKey + "_" + planObject.get("objectId") + "_" + key.replace("-","");
                 String relationKey = objectType + "_" + planObject.get("objectId");
                 String relationValue = key + "_" + objectKey;
                 jedis.sadd(relationKey, relationValue);
