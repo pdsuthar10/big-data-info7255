@@ -47,7 +47,7 @@ public class PlanController {
 
         String objectId = planService.createPlan(plan);
         String eTag = eTagService.getETag(plan);
-        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<String, String>();
+        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<>();
         headersToSend.add("ETag", eTag);
         
         return new ResponseEntity<>("{\"objectId\": \"" + objectId + "\"}", headersToSend, HttpStatus.CREATED);
@@ -59,7 +59,7 @@ public class PlanController {
 
         JSONObject object = planService.getPlan(objectId);
         String eTag = eTagService.getETag(object);
-        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<String, String>();
+        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<>();
         headers.add("ETag", eTag);
 
 
