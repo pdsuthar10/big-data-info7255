@@ -43,19 +43,20 @@ public class PlanController {
             throw new BadRequestException(e.getMessage());
         }
 
-        if(planService.isKeyPresent(plan.getString("objectId"))) throw new ConflictException("Plan already exists!");
+        if ( planService.isKeyPresent(plan.getString("objectId")) ) throw new ConflictException("Plan already exists!");
 
         String objectId = planService.createPlan(plan);
         String eTag = eTagService.getETag(plan);
         MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<>();
         headersToSend.add("ETag", eTag);
-        
+
         return new ResponseEntity<>("{\"objectId\": \"" + objectId + "\"}", headersToSend, HttpStatus.CREATED);
     }
 
     @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ){
-        if(!planService.isKeyPresent(objectId)) throw new ResourceNotFoundException("Object with the given objectID not found!");
+    public ResponseEntity<?> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ) {
+        if ( !planService.isKeyPresent(objectId) )
+            throw new ResourceNotFoundException("Object with the given objectID not found!");
 
         JSONObject object = planService.getPlan(objectId);
         String eTag = eTagService.getETag(object);
@@ -66,12 +67,12 @@ public class PlanController {
         List<String> ifNoneMatch;
         try {
             ifNoneMatch = headers.getIfNoneMatch();
-        } catch ( Exception e ) {
+        } catch (Exception e) {
             throw new ETagParseException("ETag value invalid! Make sure the ETag value is a string!");
         }
 
-        return ( eTagService.verifyETag(object, ifNoneMatch) ) ?
-                (new ResponseEntity<>(null, headersToSend ,HttpStatus.NOT_MODIFIED))
+        return (eTagService.verifyETag(object, ifNoneMatch)) ?
+                (new ResponseEntity<>(null, headersToSend, HttpStatus.NOT_MODIFIED))
                 :
                 (new ResponseEntity<>(object.toString(), headersToSend, HttpStatus.OK));
     }

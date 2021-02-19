@@ -14,17 +14,17 @@ public class PlanService {
     private JedisPool jedisPool;
 
     private JedisPool getJedisPool() {
-        if (this.jedisPool == null) {
+        if ( this.jedisPool == null ) {
             this.jedisPool = new JedisPool();
         }
         return this.jedisPool;
     }
 
-    public boolean isKeyPresent(String key){
+    public boolean isKeyPresent( String key ) {
         Jedis jedis = this.getJedisPool().getResource();
         String value = jedis.get(key);
         jedis.close();
-        return  !( value == null || value.isEmpty() );
+        return !(value == null || value.isEmpty());
     }
 
     public String createPlan( JSONObject plan ) {
