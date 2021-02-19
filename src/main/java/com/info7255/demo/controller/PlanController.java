@@ -15,9 +15,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
@@ -32,7 +33,7 @@ public class PlanController {
     }
 
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity createPlan( @RequestBody String planObject ) throws URISyntaxException {
+    public ResponseEntity<?> createPlan( @RequestBody String planObject ) throws URISyntaxException {
         JSONObject plan = new JSONObject(planObject);
         JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
         Schema schema = SchemaLoader.load(schemaJSON);
@@ -46,18 +47,20 @@ public class PlanController {
 
         String objectId = planService.createPlan(plan);
         String eTag = eTagService.getETag(plan);
-
-        return ResponseEntity.created(new URI(plan.get("objectId").toString()))
-                .eTag(eTag)
-                .body("{\"objectId\": \"" + objectId + "\"}");
+        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<String, String>();
+        headersToSend.add("ETag", eTag);
+        
+        return new ResponseEntity<>("{\"objectId\": \"" + objectId + "\"}", headersToSend, HttpStatus.CREATED);
     }
 
     @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ){
+    public ResponseEntity<?> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ){
         if(!planService.isKeyPresent(objectId)) throw new ResourceNotFoundException("Object with the given objectID not found!");
 
         JSONObject object = planService.getPlan(objectId);
         String eTag = eTagService.getETag(object);
+        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<String, String>();
+        headers.add("ETag", eTag);
 
 
         List<String> ifNoneMatch;
@@ -68,13 +71,9 @@ public class PlanController {
         }
 
         return ( eTagService.verifyETag(object, ifNoneMatch) ) ?
-                (ResponseEntity.status(HttpStatus.NOT_MODIFIED)
-                            .eTag(eTag)
-                            .build())
+                (new ResponseEntity<>(null, headersToSend ,HttpStatus.NOT_MODIFIED))
                 :
-                (ResponseEntity.ok().
-                        eTag(eTag).
-                        body(object.toString()));
+                (new ResponseEntity<>(object.toString(), headersToSend, HttpStatus.OK));
     }
 
     @DeleteMapping("/plan/{objectId}")
