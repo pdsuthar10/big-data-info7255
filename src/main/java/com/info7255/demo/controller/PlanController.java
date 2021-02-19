@@ -1,29 +1,86 @@
 package com.info7255.demo.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.info7255.demo.exception.BadRequestException;
+import com.info7255.demo.exception.ConflictException;
+import com.info7255.demo.exception.ETagParseException;
+import com.info7255.demo.exception.ResourceNotFoundException;
+import com.info7255.demo.service.ETagService;
 import com.info7255.demo.service.PlanService;
+import org.everit.json.schema.Schema;
+import org.everit.json.schema.ValidationException;
+import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
+import org.json.JSONTokener;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+
 @RestController
 public class PlanController {
     private PlanService planService;
+    private ETagService eTagService;
 
-    public PlanController(PlanService planService) {
+    public PlanController( PlanService planService, ETagService eTagService ) {
         this.planService = planService;
+        this.eTagService = eTagService;
     }
 
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
-    public String createPlan(@RequestBody String planObject) throws JsonProcessingException {
-        JSONObject object = new JSONObject(planObject);
-        String objectKey = planService.createPlan(object, "plan");
-        return "{\"objectId\": \"" + objectKey + "\"}";
+    public ResponseEntity createPlan( @RequestBody String planObject ) throws URISyntaxException {
+        JSONObject plan = new JSONObject(planObject);
+        JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
+        Schema schema = SchemaLoader.load(schemaJSON);
+        try {
+            schema.validate(plan);
+        } catch (ValidationException e) {
+            throw new BadRequestException(e.getMessage());
+        }
+
+        if(planService.isKeyPresent(plan.getString("objectId"))) throw new ConflictException("Plan already exists!");
+
+        String objectId = planService.createPlan(plan);
+        String eTag = eTagService.getETag(plan);
+
+        return ResponseEntity.created(new URI(plan.get("objectId").toString()))
+                .eTag(eTag)
+                .body("{\"objectId\": \"" + objectId + "\"}");
     }
 
-    @GetMapping("/plan/{objectId}")
-    public JSONObject getPlan(@PathVariable String objectId){
-        return planService.getPlan(objectId);
+    @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ){
+        if(!planService.isKeyPresent(objectId)) throw new ResourceNotFoundException("Object with the given objectID not found!");
+
+        JSONObject object = planService.getPlan(objectId);
+        String eTag = eTagService.getETag(object);
+
+
+        List<String> ifNoneMatch;
+        try {
+            ifNoneMatch = headers.getIfNoneMatch();
+        } catch ( Exception e ) {
+            throw new ETagParseException("ETag value invalid! Make sure the ETag value is a string!");
+        }
+
+        return ( eTagService.verifyETag(object, ifNoneMatch) ) ?
+                (ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                            .eTag(eTag)
+                            .build())
+                :
+                (ResponseEntity.ok().
+                        eTag(eTag).
+                        body(object.toString()));
+    }
+
+    @DeleteMapping("/plan/{objectId}")
+    public ResponseEntity<String> deletePlan( @PathVariable String objectId ) {
+        if ( !planService.isKeyPresent(objectId) ) throw new ResourceNotFoundException("Plan not found!");
+        planService.deletePlan(objectId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
