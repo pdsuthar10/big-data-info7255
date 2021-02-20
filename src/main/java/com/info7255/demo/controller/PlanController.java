@@ -59,7 +59,7 @@ public class PlanController {
         JSONObject object = planService.getPlan(objectId);
         String eTag = eTagService.getETag(object);
         MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<>();
-        headers.add("ETag", eTag);
+        headersToSend.add("ETag", eTag);
 
 
         List<String> ifNoneMatch;
