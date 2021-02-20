@@ -15,8 +15,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,20 +44,20 @@ public class PlanController {
 
         String objectId = planService.createPlan(plan);
         String eTag = eTagService.getETag(plan);
-        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<>();
-        headersToSend.add("ETag", eTag);
+        HttpHeaders headersToSend = new HttpHeaders();
+        headersToSend.setETag(eTag);
 
         return new ResponseEntity<>("{\"objectId\": \"" + objectId + "\"}", headersToSend, HttpStatus.CREATED);
     }
 
     @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ) {
-        if ( !planService.isKeyPresent(objectId) ) throw new ResourceNotFoundException("Object with the given objectID not found!");
+        if ( !planService.isKeyPresent(objectId) ) throw new ResourceNotFoundException("Object not found!");
 
         JSONObject object = planService.getPlan(objectId);
         String eTag = eTagService.getETag(object);
-        MultiValueMap<String, String> headersToSend = new LinkedMultiValueMap<>();
-        headersToSend.add("ETag", eTag);
+        HttpHeaders headersToSend = new HttpHeaders();
+        headersToSend.setETag(eTag);
 
 
         List<String> ifNoneMatch;
