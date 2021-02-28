@@ -42,7 +42,7 @@ public class PlanController {
 
         if ( planService.isKeyPresent(plan.getString("objectId")) ) throw new ConflictException("Plan already exists!");
 
-        String objectId = planService.createPlan(plan);
+        String objectId = planService.createPlan(plan, "plan");
         String eTag = eTagService.getETag(plan);
         HttpHeaders headersToSend = new HttpHeaders();
         headersToSend.setETag(eTag);
@@ -76,6 +76,7 @@ public class PlanController {
     @DeleteMapping("/plan/{objectId}")
     public ResponseEntity<?> deletePlan( @PathVariable String objectId ) {
         if ( !planService.isKeyPresent(objectId) ) throw new ResourceNotFoundException("Plan not found!");
+
         planService.deletePlan(objectId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
