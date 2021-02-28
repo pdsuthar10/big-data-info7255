@@ -32,13 +32,13 @@ public class PlanController {
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createPlan( @RequestBody String planObject ) {
         JSONObject plan = new JSONObject(planObject);
-        JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
-        Schema schema = SchemaLoader.load(schemaJSON);
-        try {
-            schema.validate(plan);
-        } catch (ValidationException e) {
-            throw new BadRequestException(e.getMessage());
-        }
+//        JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
+//        Schema schema = SchemaLoader.load(schemaJSON);
+//        try {
+//            schema.validate(plan);
+//        } catch (ValidationException e) {
+//            throw new BadRequestException(e.getMessage());
+//        }
 
         if ( planService.isKeyPresent(plan.getString("objectId")) ) throw new ConflictException("Plan already exists!");
 
