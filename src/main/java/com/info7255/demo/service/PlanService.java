@@ -3,23 +3,23 @@ package com.info7255.demo.service;
 
 import org.json.JSONObject;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import java.util.ArrayList;
 
 
 @Service
 public class PlanService {
+    private final Jedis jedis;
 
-    @Autowired
-    JedisPool jedisPool;
+    public PlanService(Jedis jedis) {
+        this.jedis = jedis;
+    }
 
-    public boolean isKeyPresent(String key) {
-        Jedis jedis = jedisPool.getResource();
+
+    public boolean isKeyPresent( String key ) {
         String value = jedis.get(key);
         jedis.close();
         return !(value == null || value.isEmpty());
@@ -46,16 +46,14 @@ public class PlanService {
 
     }
 
-    public JSONObject getPlan(String key) {
-        Jedis jedis = this.getJedisPool().getResource();
+    public JSONObject getPlan( String key ) {
         String value = jedis.get(key);
         jedis.close();
 
         return new JSONObject(value);
     }
 
-    public void deletePlan(String key) {
-        Jedis jedis = this.getJedisPool().getResource();
+    public void deletePlan( String key ) {
         jedis.del(key);
         jedis.close();
     }
