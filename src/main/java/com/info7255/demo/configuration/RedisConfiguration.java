@@ -24,7 +24,7 @@ public class RedisConfiguration {
     }
 
     @Bean
-    public Jedis getJedisPool(){
+    public Jedis getJedis(){
         return new JedisPool().getResource();
     }
 }
