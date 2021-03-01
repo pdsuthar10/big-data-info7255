@@ -1,8 +1,11 @@
 package com.info7255.demo.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.info7255.demo.model.ErrorResponse;
 import com.info7255.demo.util.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -13,15 +16,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    private ObjectMapper mapper;
+    private final ObjectMapper mapper;
     private final JwtUtil jwtUtil;
-
 
     public JwtFilter(ObjectMapper mapper, JwtUtil jwtUtil) {
         this.mapper = mapper;
@@ -31,14 +37,14 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
         final String authorizationHeader = httpServletRequest.getHeader("Authorization");
-        Map<String, Object> errorDetails = new HashMap<>();
 
         if(authorizationHeader == null){
-            errorDetails.put("message", "Token missing!");
+            ErrorResponse errorResponse = new ErrorResponse("Token missing", HttpStatus.UNAUTHORIZED, new Date());
+
             httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
             httpServletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-            mapper.writeValue(httpServletResponse.getWriter(), errorDetails);
+            mapper.writeValue(httpServletResponse.getWriter(), errorResponse);
             return;
         }
         String token = authorizationHeader.substring(7);
@@ -51,11 +57,12 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         if ( !isValid ) {
-            errorDetails.put("message", "Invalid Token!");
+            ErrorResponse errorResponse = new ErrorResponse("Invalid Token!", HttpStatus.UNAUTHORIZED, new Date());
+
             httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
             httpServletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-            mapper.writeValue(httpServletResponse.getWriter(), errorDetails);
+            mapper.writeValue(httpServletResponse.getWriter(), errorResponse);
             return;
         }
 
