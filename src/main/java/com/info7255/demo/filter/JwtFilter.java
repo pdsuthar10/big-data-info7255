@@ -1,7 +1,6 @@
 package com.info7255.demo.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.info7255.demo.exception.UnauthorizedException;
 import com.info7255.demo.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,8 +19,9 @@ import java.util.Map;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    private final ObjectMapper mapper;
+    private ObjectMapper mapper;
     private final JwtUtil jwtUtil;
+
 
     public JwtFilter(ObjectMapper mapper, JwtUtil jwtUtil) {
         this.mapper = mapper;
