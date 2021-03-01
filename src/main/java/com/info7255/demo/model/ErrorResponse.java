@@ -9,8 +9,7 @@ public class ErrorResponse {
 
     private final String message;
     private final HttpStatus status;
-    @JsonFormat
-            (shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy hh:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy hh:mm:ss")
     private final Date timestamp;
 
     public ErrorResponse(String message, HttpStatus status, Date timestamp) {
