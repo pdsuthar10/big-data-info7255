@@ -26,7 +26,7 @@ public class DemoApplication {
 
         ObjectMapper mapper = new ObjectMapper();
         registrationBean.setFilter(new JwtFilter(mapper, jwtUtil));
-        registrationBean.setUrlPatterns(Arrays.asList(new String[]{"/plan","/plan/*"}));
+        registrationBean.setUrlPatterns(Arrays.asList("/plan","/plan/*"));
 
         return registrationBean;
     }
