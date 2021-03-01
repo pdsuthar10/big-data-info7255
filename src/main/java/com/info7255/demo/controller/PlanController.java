@@ -1,16 +1,16 @@
 package com.info7255.demo.controller;
 
-import com.info7255.demo.exception.BadRequestException;
-import com.info7255.demo.exception.ConflictException;
-import com.info7255.demo.exception.ETagParseException;
-import com.info7255.demo.exception.ResourceNotFoundException;
+import com.info7255.demo.exception.*;
+import com.info7255.demo.model.JwtResponse;
 import com.info7255.demo.service.ETagService;
 import com.info7255.demo.service.PlanService;
+import com.info7255.demo.util.JwtUtil;
 import org.everit.json.schema.Schema;
 import org.everit.json.schema.ValidationException;
 import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,14 +23,33 @@ import java.util.List;
 public class PlanController {
     private PlanService planService;
     private ETagService eTagService;
+    private final JwtUtil jwtUtil;
 
-    public PlanController( PlanService planService, ETagService eTagService ) {
+    public PlanController(PlanService planService, ETagService eTagService, JwtUtil jwtUtil) {
         this.planService = planService;
         this.eTagService = eTagService;
+        this.jwtUtil = jwtUtil;
+    }
+
+    @GetMapping("/generateToken")
+    public JwtResponse generateToken(){
+        String token = jwtUtil.generateToken();
+        return new JwtResponse(token);
+    }
+
+    @PostMapping("/validate/{token}")
+    public boolean validateToken(@PathVariable String token){
+        boolean result = false;
+        try {
+            result = jwtUtil.validateToken(token);
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid Token");
+        }
+       return result;
     }
 
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> createPlan( @RequestBody String planObject ) {
+    public ResponseEntity<?> createPlan(@RequestBody String planObject) {
         JSONObject plan = new JSONObject(planObject);
 //        JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
 //        Schema schema = SchemaLoader.load(schemaJSON);
@@ -40,7 +59,8 @@ public class PlanController {
 //            throw new BadRequestException(e.getMessage());
 //        }
 
-        if ( planService.isKeyPresent(plan.getString("objectId")) ) throw new ConflictException("Plan already exists!");
+        String keyToSearch = "plan:" + plan.getString("objectId");
+        if (planService.isKeyPresent(keyToSearch)) throw new ConflictException("Plan already exists!");
 
         String objectId = planService.createPlan(plan, "plan");
         String eTag = eTagService.getETag(plan);
@@ -51,8 +71,8 @@ public class PlanController {
     }
 
     @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getPlan( @PathVariable String objectId, @RequestHeader HttpHeaders headers ) {
-        if ( !planService.isKeyPresent(objectId) ) throw new ResourceNotFoundException("Object not found!");
+    public ResponseEntity<?> getPlan(@PathVariable String objectId, @RequestHeader HttpHeaders headers) {
+        if (!planService.isKeyPresent(objectId)) throw new ResourceNotFoundException("Object not found!");
 
         JSONObject object = planService.getPlan(objectId);
         String eTag = eTagService.getETag(object);
@@ -74,8 +94,8 @@ public class PlanController {
     }
 
     @DeleteMapping("/plan/{objectId}")
-    public ResponseEntity<?> deletePlan( @PathVariable String objectId ) {
-        if ( !planService.isKeyPresent(objectId) ) throw new ResourceNotFoundException("Plan not found!");
+    public ResponseEntity<?> deletePlan(@PathVariable String objectId) {
+        if (!planService.isKeyPresent(objectId)) throw new ResourceNotFoundException("Plan not found!");
 
         planService.deletePlan(objectId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);

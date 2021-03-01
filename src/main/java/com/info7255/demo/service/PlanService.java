@@ -27,11 +27,6 @@ public class PlanService {
     }
 
     public String createPlan(JSONObject plan, String objectType) {
-//        String key = (String) plan.get("objectId");
-//        jedis.hset(key, jsonToMap(plan));
-//        jedis.close();
-//
-//        return key;
         ArrayList<String> keysToDelete = new ArrayList<>();
         for (String key : plan.keySet()) {
             Object current = plan.get(key);
@@ -41,6 +36,7 @@ public class PlanService {
 
                 String relationKey = objectType + ":" + plan.getString("objectId") + ":relation";
                 jedis.sadd(relationKey, objectKey);
+                System.out.println(jedis.smembers(relationKey));
                 jedis.close();
             }
         }
@@ -59,7 +55,7 @@ public class PlanService {
         Map<String, String> value = jedis.hgetAll(key);
         jedis.close();
 
-        return new JSONObject(value);
+        return mapToJson(value);
     }
 
     public void deletePlan(String key) {
@@ -73,5 +69,18 @@ public class PlanService {
             map.put(key, jsonObject.get(key).toString());
         }
         return map;
+    }
+
+    public JSONObject mapToJson(Map<String, String> map){
+        Map<String, Object> result = new HashMap<>();
+        for(Map.Entry<String, String> entry: map.entrySet()){
+            try {
+                int value = Integer.parseInt(entry.getValue());
+                result.put(entry.getKey(), value);
+            } catch (Exception e) {
+                result.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return new JSONObject(result);
     }
 }
