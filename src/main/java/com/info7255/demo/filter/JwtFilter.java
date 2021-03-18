@@ -39,7 +39,12 @@ public class JwtFilter extends OncePerRequestFilter {
         final String authorizationHeader = httpServletRequest.getHeader("Authorization");
 
         if(authorizationHeader == null){
-            ErrorResponse errorResponse = new ErrorResponse("Token missing", HttpStatus.UNAUTHORIZED, new Date());
+            ErrorResponse errorResponse = new ErrorResponse(
+                    "Token missing",
+                    HttpStatus.UNAUTHORIZED.value(),
+                    new Date(),
+                    HttpStatus.UNAUTHORIZED.getReasonPhrase()
+            );
 
             httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
             httpServletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -47,9 +52,10 @@ public class JwtFilter extends OncePerRequestFilter {
             mapper.writeValue(httpServletResponse.getWriter(), errorResponse);
             return;
         }
-        String token = authorizationHeader.substring(7);
+
         boolean isValid;
         try {
+            String token = authorizationHeader.substring(7);
             isValid = jwtUtil.validateToken(token);
         } catch (Exception e) {
             System.out.println(e);
@@ -57,7 +63,12 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         if ( !isValid ) {
-            ErrorResponse errorResponse = new ErrorResponse("Invalid Token!", HttpStatus.UNAUTHORIZED, new Date());
+            ErrorResponse errorResponse = new ErrorResponse(
+                    "Invalid Token!",
+                    HttpStatus.UNAUTHORIZED.value(),
+                    new Date(),
+                    HttpStatus.UNAUTHORIZED.getReasonPhrase()
+            );
 
             httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
             httpServletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);

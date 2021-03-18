@@ -9,12 +9,7 @@ import org.everit.json.schema.Schema;
 import org.everit.json.schema.ValidationException;
 import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
-import org.json.JSONTokener;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,10 +32,13 @@ public class PlanController {
         return new JwtResponse(token);
     }
 
-    @PostMapping("/validate/{token}")
-    public boolean validateToken(@PathVariable String token){
-        boolean result = false;
+    @PostMapping("/validate")
+    public boolean validateToken(@RequestHeader HttpHeaders requestHeader){
+        boolean result;
+        String authorization = requestHeader.getFirst("Authorization");
+        if (authorization == null || authorization.isBlank()) throw new UnauthorizedException("Missing token!");
         try {
+            String token = authorization.split(" ")[1];
             result = jwtUtil.validateToken(token);
         } catch (Exception e) {
             throw new UnauthorizedException("Invalid Token");

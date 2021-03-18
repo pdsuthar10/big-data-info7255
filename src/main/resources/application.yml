@@ -1,6 +1,3 @@
 server:
   error:
     include-message: always
-
-jwt:
-  secret: 7fa0ebf1-6075-4542-8310-3c1584f56d8f
