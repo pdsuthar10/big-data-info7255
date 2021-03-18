@@ -9,6 +9,7 @@ import org.everit.json.schema.Schema;
 import org.everit.json.schema.ValidationException;
 import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,13 +50,13 @@ public class PlanController {
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createPlan(@RequestBody String planObject) {
         JSONObject plan = new JSONObject(planObject);
-//        JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
-//        Schema schema = SchemaLoader.load(schemaJSON);
-//        try {
-//            schema.validate(plan);
-//        } catch (ValidationException e) {
-//            throw new BadRequestException(e.getMessage());
-//        }
+        JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
+        Schema schema = SchemaLoader.load(schemaJSON);
+        try {
+            schema.validate(plan);
+        } catch (ValidationException e) {
+            throw new BadRequestException(e.getMessage());
+        }
 
         String keyToSearch = "plan:" + plan.getString("objectId");
         if (planService.isKeyPresent(keyToSearch)) throw new ConflictException("Plan already exists!");
