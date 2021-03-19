@@ -27,10 +27,10 @@ public class PlanController {
         this.jwtUtil = jwtUtil;
     }
 
-    @GetMapping("/generateToken")
-    public JwtResponse generateToken(){
+    @GetMapping("/token")
+    public ResponseEntity<JwtResponse> generateToken(){
         String token = jwtUtil.generateToken();
-        return new JwtResponse(token);
+        return new ResponseEntity<>(new JwtResponse(token), HttpStatus.CREATED);
     }
 
     @PostMapping("/validate")
