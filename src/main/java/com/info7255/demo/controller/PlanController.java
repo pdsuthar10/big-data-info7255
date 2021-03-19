@@ -49,6 +49,8 @@ public class PlanController {
 
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createPlan(@RequestBody String planObject) {
+        if (planObject == null || planObject.isBlank()) throw new BadRequestException("Request body is missing!");
+
         JSONObject plan = new JSONObject(planObject);
         JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
         Schema schema = SchemaLoader.load(schemaJSON);
