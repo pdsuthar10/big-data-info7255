@@ -1,9 +1,13 @@
 package com.info7255.demo.service;
 
 
+import com.info7255.demo.model.ErrorResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
@@ -49,15 +53,14 @@ public class PlanService {
     }
 
     public void deletePlan(String key) {
-        jedis.del(key);
-        jedis.close();
+        getOrDelete(key, null, true);
     }
 
     public Map<String, Map<String, Object>> jsonToMap(JSONObject jsonObject) {
         Map<String, Map<String, Object>> map = new HashMap<>();
         Map<String, Object> contentMap = new HashMap<>();
 
-        for (String key : jsonObject.keySet()){
+        for (String key : jsonObject.keySet()) {
             String redisKey = jsonObject.get("objectType") + ":" + jsonObject.get("objectId");
             Object value = jsonObject.get(key);
 
@@ -71,7 +74,6 @@ public class PlanService {
                             entry.keySet()
                                     .forEach((listKey) -> {
                                         jedis.sadd(redisKey + ":" + key, listKey);
-                                        System.out.println("In list, " + redisKey + ":" + key + " -> " + listKey);
                                     });
                         });
             } else {
@@ -80,20 +82,19 @@ public class PlanService {
                 map.put(redisKey, contentMap);
             }
         }
-        System.out.println("Map: " + map.toString());
         return map;
     }
 
     private Map<String, Object> getOrDelete(String redisKey, Map<String, Object> resultMap, boolean isDelete) {
         Set<String> keys = jedis.keys(redisKey + ":*");
         keys.add(redisKey);
-        System.out.println("Keys for "+redisKey+": " + keys);
-        for (String key: keys) {
-            if(key.equals(redisKey)) {
-                if(isDelete) jedis.del(new String[]{key});
+
+        for (String key : keys) {
+            if (key.equals(redisKey)) {
+                if (isDelete) jedis.del(new String[]{key});
                 else {
                     Map<String, String> object = jedis.hgetAll(key);
-                    for (String attrKey : object.keySet()){
+                    for (String attrKey : object.keySet()) {
                         if (!attrKey.equalsIgnoreCase("eTag")) {
                             resultMap.put(attrKey, isInteger(object.get(attrKey)) ? Integer.parseInt(object.get(attrKey)) : object.get(attrKey));
                         }
@@ -101,10 +102,8 @@ public class PlanService {
                 }
             } else {
                 String newKey = key.substring((redisKey + ":").length());
-                System.out.println("Key to be serched :" + key + "--------------" + newKey);
                 Set<String> members = jedis.smembers(key);
-                System.out.println("Members for " + key + ": " + members );
-                if (members.size() > 1) {
+                if (members.size() > 1 || newKey.equals("linkedPlanServices")) {
                     List<Object> listObj = new ArrayList<>();
                     for (String member : members) {
                         if (isDelete) {
@@ -121,7 +120,6 @@ public class PlanService {
                         jedis.del(new String[]{members.iterator().next(), key});
                     } else {
                         Map<String, String> object = jedis.hgetAll(members.iterator().next());
-                        System.out.println("All keys : " + object);
                         Map<String, Object> nestedMap = new HashMap<>();
                         for (String attrKey : object.keySet()) {
                             nestedMap.put(attrKey,
@@ -145,7 +143,7 @@ public class PlanService {
         return result;
     }
 
-    private boolean isInteger(String str){
+    private boolean isInteger(String str) {
         try {
             Integer.parseInt(str);
         } catch (Exception e) {

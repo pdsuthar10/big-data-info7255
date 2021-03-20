@@ -8,4 +8,6 @@ public class ETagParseException extends RuntimeException{
     public ETagParseException( String message ) {
         super(message);
     }
+    public ETagParseException() {
+    }
 }
