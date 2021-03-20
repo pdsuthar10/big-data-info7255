@@ -49,7 +49,7 @@ public class PlanController {
 
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createPlan(@RequestBody String planObject) {
-        if (planObject == null || planObject.isBlank()) throw new BadRequestException("Request body is missing!");
+//        if (planObject == null || planObject.isBlank()) throw new BadRequestException("Request body is missing!");
 
         JSONObject plan = new JSONObject(planObject);
         JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
@@ -60,15 +60,14 @@ public class PlanController {
             throw new BadRequestException(e.getMessage());
         }
 
-        String keyToSearch = "plan:" + plan.getString("objectId");
-        if (planService.isKeyPresent(keyToSearch)) throw new ConflictException("Plan already exists!");
+        String key = "plan:" + plan.getString("objectId");
+        if (planService.isKeyPresent(key)) throw new ConflictException("Plan already exists!");
 
-        String objectId = planService.createPlan(plan, "plan");
-        String eTag = eTagService.getETag(plan);
+        String eTag = planService.createPlan(plan, key);
         HttpHeaders headersToSend = new HttpHeaders();
         headersToSend.setETag(eTag);
 
-        return new ResponseEntity<>("{\"objectId\": \"" + objectId + "\"}", headersToSend, HttpStatus.CREATED);
+        return new ResponseEntity<>("{\"objectId\": \"" + plan.getString("objectId") + "\"}", headersToSend, HttpStatus.CREATED);
     }
 
     @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
