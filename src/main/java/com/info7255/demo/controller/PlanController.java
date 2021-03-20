@@ -14,6 +14,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class PlanController {
@@ -49,7 +50,7 @@ public class PlanController {
 
     @PostMapping(value = "/plan", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createPlan(@RequestBody String planObject) {
-//        if (planObject == null || planObject.isBlank()) throw new BadRequestException("Request body is missing!");
+        if (planObject == null || planObject.isBlank()) throw new BadRequestException("Request body is missing!");
 
         JSONObject plan = new JSONObject(planObject);
         JSONObject schemaJSON = new JSONObject(new JSONTokener(PlanController.class.getResourceAsStream("/plan-schema.json")));
@@ -70,16 +71,14 @@ public class PlanController {
         return new ResponseEntity<>("{\"objectId\": \"" + plan.getString("objectId") + "\"}", headersToSend, HttpStatus.CREATED);
     }
 
-    @GetMapping(value = "/plan/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getPlan(@PathVariable String objectId, @RequestHeader HttpHeaders headers) {
-        if (!planService.isKeyPresent(objectId)) throw new ResourceNotFoundException("Object not found!");
+    @GetMapping(value = "/{objectType}/{objectId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getPlan(@PathVariable String objectId,
+                                     @PathVariable String objectType,
+                                     @RequestHeader HttpHeaders headers) {
+        String key = objectType + ":" + objectId;
+        if (!planService.isKeyPresent(key)) throw new ResourceNotFoundException("Object not found!");
 
-        JSONObject object = planService.getPlan(objectId);
-        String eTag = eTagService.getETag(object);
-        HttpHeaders headersToSend = new HttpHeaders();
-        headersToSend.setETag(eTag);
-
-
+        // Check if the ETag provided is not corrupt
         List<String> ifNoneMatch;
         try {
             ifNoneMatch = headers.getIfNoneMatch();
@@ -87,10 +86,20 @@ public class PlanController {
             throw new ETagParseException("ETag value invalid! Make sure the ETag value is a string!");
         }
 
-        return (eTagService.verifyETag(object, ifNoneMatch)) ?
-                (new ResponseEntity<>(null, headersToSend, HttpStatus.NOT_MODIFIED))
-                :
-                (new ResponseEntity<>(object.toString(), headersToSend, HttpStatus.OK));
+        String eTag = planService.getETag(key);;
+        HttpHeaders headersToSend = new HttpHeaders();
+        headersToSend.setETag(eTag);
+
+
+        if (objectType.equals("plan") && ifNoneMatch.contains(eTag))
+            return new ResponseEntity<>(null, headersToSend, HttpStatus.NOT_MODIFIED);
+
+        Map<String, Object> objectToReturn = planService.getPlan(key);
+
+        if (objectType.equals("plan"))
+            return new ResponseEntity<>(objectToReturn, headersToSend, HttpStatus.OK);
+
+        return new ResponseEntity<>(objectToReturn, HttpStatus.OK);
     }
 
     @DeleteMapping("/plan/{objectId}")

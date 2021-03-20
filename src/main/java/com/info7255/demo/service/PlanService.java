@@ -27,6 +27,10 @@ public class PlanService {
         return !(value == null || value.isEmpty());
     }
 
+    public String getETag(String key) {
+        return jedis.hget(key, "eTag");
+    }
+
     public String setETag(String key, JSONObject jsonObject) {
         String eTag = eTagService.getETag(jsonObject);
         jedis.hset(key, "eTag", eTag);
@@ -38,11 +42,10 @@ public class PlanService {
         return setETag(key, plan);
     }
 
-    public JSONObject getPlan(String key) {
-        Map<String, String> value = jedis.hgetAll(key);
-        jedis.close();
-
-        return mapToJson(value);
+    public Map<String, Object> getPlan(String key) {
+        Map<String, Object> result = new HashMap<>();
+        getOrDelete(key, result, false);
+        return result;
     }
 
     public void deletePlan(String key) {
@@ -60,7 +63,7 @@ public class PlanService {
 
             if (value instanceof JSONObject) {
                 value = jsonToMap((JSONObject) value);
-                jedis.sadd(redisKey + ":" + key, ((Map<String, Map<String, Object>>) value).keySet().stream().findFirst() + "");
+                jedis.sadd(redisKey + ":" + key, ((Map<String, Map<String, Object>>) value).entrySet().iterator().next().getKey());
             } else if (value instanceof JSONArray) {
                 value = jsonToList((JSONArray) value);
                 ((List<Map<String, Map<String, Object>>>) value)
@@ -81,6 +84,57 @@ public class PlanService {
         return map;
     }
 
+    private Map<String, Object> getOrDelete(String redisKey, Map<String, Object> resultMap, boolean isDelete) {
+        Set<String> keys = jedis.keys(redisKey + ":*");
+        keys.add(redisKey);
+        System.out.println("Keys for "+redisKey+": " + keys);
+        for (String key: keys) {
+            if(key.equals(redisKey)) {
+                if(isDelete) jedis.del(new String[]{key});
+                else {
+                    Map<String, String> object = jedis.hgetAll(key);
+                    for (String attrKey : object.keySet()){
+                        if (!attrKey.equalsIgnoreCase("eTag")) {
+                            resultMap.put(attrKey, isInteger(object.get(attrKey)) ? Integer.parseInt(object.get(attrKey)) : object.get(attrKey));
+                        }
+                    }
+                }
+            } else {
+                String newKey = key.substring((redisKey + ":").length());
+                System.out.println("Key to be serched :" + key + "--------------" + newKey);
+                Set<String> members = jedis.smembers(key);
+                System.out.println("Members for " + key + ": " + members );
+                if (members.size() > 1) {
+                    List<Object> listObj = new ArrayList<>();
+                    for (String member : members) {
+                        if (isDelete) {
+                            getOrDelete(member, null, true);
+                        } else {
+                            Map<String, Object> listMap = new HashMap<>();
+                            listObj.add(getOrDelete(member, listMap, false));
+                        }
+                    }
+                    if (isDelete) jedis.del(new String[]{key});
+                    else resultMap.put(newKey, listObj);
+                } else {
+                    if (isDelete) {
+                        jedis.del(new String[]{members.iterator().next(), key});
+                    } else {
+                        Map<String, String> object = jedis.hgetAll(members.iterator().next());
+                        System.out.println("All keys : " + object);
+                        Map<String, Object> nestedMap = new HashMap<>();
+                        for (String attrKey : object.keySet()) {
+                            nestedMap.put(attrKey,
+                                    isInteger(object.get(attrKey)) ? Integer.parseInt(object.get(attrKey)) : object.get(attrKey));
+                        }
+                        resultMap.put(newKey, nestedMap);
+                    }
+                }
+            }
+        }
+        return resultMap;
+    }
+
     public List<Object> jsonToList(JSONArray jsonArray) {
         List<Object> result = new ArrayList<>();
         for (Object value : jsonArray) {
@@ -91,16 +145,12 @@ public class PlanService {
         return result;
     }
 
-    public JSONObject mapToJson(Map<String, String> map){
-        Map<String, Object> result = new HashMap<>();
-        for(Map.Entry<String, String> entry: map.entrySet()){
-            try {
-                int value = Integer.parseInt(entry.getValue());
-                result.put(entry.getKey(), value);
-            } catch (Exception e) {
-                result.put(entry.getKey(), entry.getValue());
-            }
+    private boolean isInteger(String str){
+        try {
+            Integer.parseInt(str);
+        } catch (Exception e) {
+            return false;
         }
-        return new JSONObject(result);
+        return true;
     }
 }
