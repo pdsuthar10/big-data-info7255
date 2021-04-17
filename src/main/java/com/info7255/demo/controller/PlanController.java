@@ -68,7 +68,7 @@ public class PlanController {
 
         String eTag = planService.createPlan(plan, key);
 
-        // Send a message to queue for indexer to listen
+        // Send a message to queue for indexing
         Map<String, String> message = new HashMap<>();
         message.put("operation", "SAVE");
         message.put("body", planObject);
@@ -132,6 +132,7 @@ public class PlanController {
         if (ifMatch.size() == 0) throw new ETagParseException("ETag is not provided with request!");
         if (!ifMatch.contains(eTag)) return preConditionFailed(eTag);
 
+        // Send message to queue for deleting indices
         Map<String, Object> plan = planService.getPlan(key);
         Map<String, String> message = new HashMap<>();
         message.put("operation", "DELETE");
@@ -175,6 +176,15 @@ public class PlanController {
 
         planService.deletePlan(key);
         String updatedETag = planService.createPlan(plan, key);
+
+        // Send message to queue for index update
+        Map<String, String> message = new HashMap<>();
+        message.put("operation", "PUT");
+        message.put("body", planObject);
+
+        System.out.println("Sending message: " + message);
+        template.convertAndSend(DemoApplication.queueName, message);
+
         HttpHeaders headersToSend = new HttpHeaders();
         headersToSend.setETag(updatedETag);
         return new ResponseEntity<>("{\"message\": \"Plan updated successfully\"}",
