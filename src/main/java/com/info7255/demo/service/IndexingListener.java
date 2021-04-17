@@ -48,11 +48,6 @@ public class IndexingListener {
                 deleteDocument(jsonBody);
                 break;
             }
-            case "PUT": {
-                deleteDocument(jsonBody);
-                postDocument(jsonBody);
-                break;
-            }
         }
     }
 
@@ -66,6 +61,7 @@ public class IndexingListener {
             createElasticIndex();
         }
 
+        MapOfDocuments = new LinkedHashMap<>();
         convertMapToDocumentIndex(plan, "", "plan");
 
         for (Map.Entry<String, Map<String, Object>> entry : MapOfDocuments.entrySet()) {
@@ -82,6 +78,7 @@ public class IndexingListener {
     }
 
     private void deleteDocument(JSONObject jsonObject) throws IOException {
+        listOfKeys = new ArrayList<>();
         convertToKeys(jsonObject);
 
         for(String key : listOfKeys){
@@ -146,11 +143,11 @@ public class IndexingListener {
 
             if (value instanceof JSONObject) {
 
-                convertMapToDocumentIndex((JSONObject) value, jsonObject.get("objectId").toString(), key.toString());
+                convertMapToDocumentIndex((JSONObject) value, jsonObject.get("objectId").toString(), key);
 
             } else if (value instanceof JSONArray) {
 
-                convertToList((JSONArray) value, jsonObject.get("objectId").toString(), key.toString());
+                convertToList((JSONArray) value, jsonObject.get("objectId").toString(), key);
 
             } else {
                 valueMap.put(key, value);

@@ -173,14 +173,23 @@ public class PlanController {
         } catch (ValidationException e) {
             throw new BadRequestException(e.getMessage());
         }
+        // Send message to queue for deleting previous indices incase of put
+        Map<String, Object> oldPlan = planService.getPlan(key);
+        Map<String, String> message = new HashMap<>();
+        message.put("operation", "DELETE");
+        message.put("body", new JSONObject(oldPlan).toString());
+
+        System.out.println("Sending message: " + message);
+        template.convertAndSend(DemoApplication.queueName, message);
 
         planService.deletePlan(key);
         String updatedETag = planService.createPlan(plan, key);
 
         // Send message to queue for index update
-        Map<String, String> message = new HashMap<>();
-        message.put("operation", "PUT");
-        message.put("body", planObject);
+        Map<String, Object> newPlan = planService.getPlan(key);
+        message = new HashMap<>();
+        message.put("operation", "SAVE");
+        message.put("body", new JSONObject(newPlan).toString());
 
         System.out.println("Sending message: " + message);
         template.convertAndSend(DemoApplication.queueName, message);
