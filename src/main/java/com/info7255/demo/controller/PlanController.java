@@ -214,6 +214,15 @@ public class PlanController {
         if (!ifMatch.contains(eTag)) return preConditionFailed(eTag);
 
         String updatedEtag = planService.createPlan(plan, key);
+
+        // Send message to queue for index update
+        Map<String, String> message = new HashMap<>();
+        message.put("operation", "SAVE");
+        message.put("body", planObject);
+
+        System.out.println("Sending message: " + message);
+        template.convertAndSend(DemoApplication.queueName, message);
+
         return ResponseEntity.ok()
                 .eTag(updatedEtag)
                 .body(new JSONObject().put("message: ", "Plan updated successfully!!").toString());
