@@ -132,6 +132,14 @@ public class PlanController {
         if (ifMatch.size() == 0) throw new ETagParseException("ETag is not provided with request!");
         if (!ifMatch.contains(eTag)) return preConditionFailed(eTag);
 
+        Map<String, Object> plan = planService.getPlan(key);
+        Map<String, String> message = new HashMap<>();
+        message.put("operation", "DELETE");
+        message.put("body",  new JSONObject(plan).toString());
+
+        System.out.println("Sending message: " + message);
+        template.convertAndSend(DemoApplication.queueName, message);
+
         planService.deletePlan(key);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
